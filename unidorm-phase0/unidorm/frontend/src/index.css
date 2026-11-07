@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+/* Design tokens approximated from the Figma prototype (dark navy + light-blue accent).
+   Adjust here once exact values are taken from Figma. */
+@theme {
+  --color-page: #051230;
+  --color-surface: #0a2250;
+  --color-surface-raised: #11326b;
+  --color-border: #1e3f7a;
+  --color-accent: #5aaeff;
+  --color-text: #eaf1ff;
+  --color-muted: #8fa6d6;
+  --color-success: #4fd1a1;
+  --color-warning: #f5c04a;
+  --color-danger: #ff7a85;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--color-page);
+    color: var(--color-text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+}
