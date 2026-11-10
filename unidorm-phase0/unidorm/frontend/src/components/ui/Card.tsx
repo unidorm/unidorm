@@ -46,7 +46,7 @@ export default function Card({
       {...rest}
     >
       {hasHeader && (
-        <header className={cx("flex items-start justify-between gap-4", children && "mb-4")}>
+        <header className={cx("flex items-start justify-between gap-4", Boolean(children) && "mb-4")}>
           <div className="min-w-0">
             {eyebrow && <p className="eyebrow mb-1.5">{eyebrow}</p>}
             {title && <h2 className="font-display text-lg font-semibold leading-snug">{title}</h2>}
