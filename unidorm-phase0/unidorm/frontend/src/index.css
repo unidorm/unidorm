@@ -6,13 +6,23 @@
   --color-page: #051230;
   --color-surface: #0a2250;
   --color-surface-raised: #11326b;
+  --color-surface-sunken: #04102a;
   --color-border: #1e3f7a;
+  --color-border-strong: #2f5ca8;
   --color-accent: #5aaeff;
+  --color-accent-strong: #3d95ee;
+  --color-on-accent: #04163a;
   --color-text: #eaf1ff;
   --color-muted: #8fa6d6;
   --color-success: #4fd1a1;
   --color-warning: #f5c04a;
   --color-danger: #ff7a85;
+
+  --font-sans: "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --radius-control: 0.625rem;
+  --radius-card: 1rem;
 }
 
 @layer base {
@@ -25,6 +35,24 @@
   body {
     background-color: var(--color-page);
     color: var(--color-text);
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Small uppercase label used above page titles and inside cards. */
+  .eyebrow {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-accent);
   }
 }

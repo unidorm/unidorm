@@ -4,7 +4,7 @@ University dormitory roommate matching web application (KBTU, Jastar City), base
 
 Students answer a 15-question habits survey. A rule-based score compares them with possible roommates in five areas (Sleep 25%, Noise 20%, Cleanliness 20%, Visitors 20%, Study 15%). The housing manager reviews the results and makes the final decision. The system only recommends.
 
-> **Status: Phase 0.** Project foundation only. No business features are implemented yet.
+> **Status: Stage 1 – basic interface.** Two portal layouts (Student and Housing manager), navigation, reusable UI components, all pages with sample data, and a minimal backend (health check, PostgreSQL connection, `User` model). Authentication, survey, scoring and room assignment are later stages.
 
 ## Technology stack
 
@@ -44,6 +44,12 @@ cp .env.example .env      # Windows: copy .env.example .env
 # edit .env and put your real password into DATABASE_URL
 ```
 
+Create the `users` table (Stage 1 has a single model):
+
+```bash
+python -m app.db.init_db      # prints: Tables in the database: users
+```
+
 ### 3. Frontend
 
 ```bash
@@ -69,7 +75,18 @@ Frontend (from `frontend/`):
 npm run dev
 ```
 
-Open <http://localhost:5173>. The placeholder page shows whether the API is online. In development Vite proxies `/api` to port 8000.
+Open <http://localhost:5173> (it redirects to `/student/home`). The sidebar footer shows whether the API is online. In development Vite proxies `/api` to port 8000.
+
+| Student portal | Housing manager portal |
+|---|---|
+| `/student/home` | `/manager/rooms` |
+| `/student/accommodation` | `/manager/dashboard` (LATER) |
+| `/student/roommate-matching` (MODULE) | `/manager/feedback` (LATER) |
+| `/student/documents` | `/manager/relocations` (LATER) |
+| `/student/payments` (LATER) | |
+| `/student/help` | |
+
+The Student / Housing manager switch in the header is a demo device from the prototype. Pages show sample data from `frontend/src/data/`, kept separate from the UI so it can be replaced by API responses.
 
 Production build check: `npm run build` (from `frontend/`).
 
