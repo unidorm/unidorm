@@ -12,6 +12,7 @@ export const ROUTES = {
     // Under roommate-matching, so the sidebar keeps that item highlighted.
     survey: "/student/roommate-matching/survey",
     surveyReview: "/student/roommate-matching/review",
+    matchingResults: "/student/roommate-matching/results",
     documents: "/student/documents",
     payments: "/student/payments",
     help: "/student/help",
@@ -19,6 +20,9 @@ export const ROUTES = {
   manager: {
     root: "/manager",
     rooms: "/manager/rooms",
+    // Under rooms, so the sidebar keeps "Room groups" highlighted.
+    roomGroup: "/manager/rooms/groups/:groupId",
+    compare: "/manager/rooms/compare",
     dashboard: "/manager/dashboard",
     feedback: "/manager/feedback",
     relocations: "/manager/relocations",

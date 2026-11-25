@@ -20,7 +20,9 @@ def client():
 
     Base.metadata.drop_all(bind=engine)
     with engine.begin() as connection:
-        connection.execute(text("DROP TYPE IF EXISTS room_type, user_role, survey_answer_type, survey_response_status"))
+        connection.execute(
+            text("DROP TYPE IF EXISTS room_type, user_role, survey_answer_type, survey_response_status, roommate_group_status")
+        )
     init_db()
     with TestClient(app) as test_client:
         yield test_client

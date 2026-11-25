@@ -1,4 +1,5 @@
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timezone
+UTC = timezone.utc
 
 from fastapi import HTTPException, status
 from sqlalchemy import delete, select

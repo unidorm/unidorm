@@ -5,13 +5,15 @@ import AuthLayout from "../../components/auth/AuthLayout";
 import { Button, FormMessage, Input } from "../../components/ui";
 import { ROUTES } from "../../config/routes";
 import { useAuth } from "../../context/AuthContext";
+import { HOME_BY_ROLE } from "../../routes/RequireRole";
 import { errorMessage } from "../../services/apiClient";
 
 export default function LoginPage() {
-  const { login, status } = useAuth();
+  const { login, status, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from ?? ROUTES.student.home;
+  // Back to the page that asked for sign-in, otherwise to the user's own portal (see RequireRole).
+  const from = (location.state as { from?: string } | null)?.from;
   const expired = new URLSearchParams(location.search).get("expired") === "1";
 
   const [email, setEmail] = useState("");
@@ -20,7 +22,7 @@ export default function LoginPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  if (status === "signed-in") return <Navigate to={from} replace />;
+  if (status === "signed-in" && user) return <Navigate to={from ?? HOME_BY_ROLE[user.role]} replace />;
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -33,8 +35,8 @@ export default function LoginPage() {
 
     setSubmitting(true);
     try {
-      await login(email.trim(), password);
-      navigate(from, { replace: true });
+      const signedIn = await login(email.trim(), password);
+      navigate(from ?? HOME_BY_ROLE[signedIn.role], { replace: true });
     } catch (error) {
       setFormError(errorMessage(error));
     } finally {

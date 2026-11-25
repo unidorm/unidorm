@@ -37,8 +37,8 @@ export const PORTALS: Record<Portal, PortalConfig> = {
     switchLabel: "Housing manager",
     homePath: ROUTES.manager.rooms,
     items: [
-      { id: "rooms", label: "Rooms", path: ROUTES.manager.rooms, icon: "door", status: "available" },
-      { id: "dashboard", label: "Dashboard", path: ROUTES.manager.dashboard, icon: "dashboard", status: "later" },
+      { id: "rooms", label: "Room groups", path: ROUTES.manager.rooms, icon: "door", status: "available" },
+      { id: "dashboard", label: "Dashboard", path: ROUTES.manager.dashboard, icon: "dashboard", status: "available" },
       {
         id: "feedback",
         label: "Feedback surveys",

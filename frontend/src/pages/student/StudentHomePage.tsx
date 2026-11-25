@@ -33,6 +33,14 @@ function NextStep({ dashboard }: { dashboard: Dashboard }) {
       </ButtonLink>
     );
   }
+  if (dashboard.matching.state === "matched") {
+    return (
+      <ButtonLink to={ROUTES.student.matchingResults} size="lg">
+        Meet my roommates
+        <Icon name="arrowRight" size={18} />
+      </ButtonLink>
+    );
+  }
   return (
     <ButtonLink to={ROUTES.student.accommodation} size="lg" variant="secondary">
       View my application
@@ -60,12 +68,18 @@ function QuestionnaireCard({ dashboard }: { dashboard: Dashboard }) {
     body = (
       <>
         <FormMessage tone="success">
-          Questionnaire submitted on {formatDate(survey.submitted_at)}. The housing manager will use it to find your
-          roommates.
+          {dashboard.matching.state === "matched"
+            ? `Your room was approved on ${formatDate(dashboard.matching.approved_at)}. See who you live with and how well you match.`
+            : `Questionnaire submitted on ${formatDate(survey.submitted_at)}. The housing manager will use it to find your roommates.`}
         </FormMessage>
-        <ButtonLink to={ROUTES.student.surveyReview} variant="outline" className="mt-3">
-          See my answers
-        </ButtonLink>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {dashboard.matching.state === "matched" && (
+            <ButtonLink to={ROUTES.student.matchingResults}>See matching results</ButtonLink>
+          )}
+          <ButtonLink to={ROUTES.student.surveyReview} variant="outline">
+            See my answers
+          </ButtonLink>
+        </div>
       </>
     );
   } else {

@@ -28,7 +28,14 @@ class SurveySummary(BaseModel):
     submitted_at: datetime | None
 
 
+class MatchingSummary(BaseModel):
+    # Same states as GET /api/student/matching (Phase 3).
+    state: Literal["not_needed", "no_questionnaire", "waiting", "matched"]
+    approved_at: datetime | None
+
+
 class DashboardOut(BaseModel):
     user: UserOut
     room_preference: RoomPreferenceOut
     survey: SurveySummary
+    matching: MatchingSummary

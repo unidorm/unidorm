@@ -13,6 +13,8 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<User>;
   register: (fullName: string, email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
+  /** True after the user pressed "Log out" (not after an expired session), so the next sign-in starts fresh. */
+  loggedOutByUser: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -21,6 +23,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>(() => (getToken() ? "loading" : "signed-out"));
   const [user, setUser] = useState<User | null>(null);
+  const [loggedOutByUser, setLoggedOutByUser] = useState(false);
 
   const signOutLocally = useCallback(() => {
     clearToken();
@@ -52,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const accept = useCallback((result: AuthResponse) => {
     setToken(result.token);
+    setLoggedOutByUser(false);
     setUser(result.user);
     setStatus("signed-in");
     return result.user;
@@ -61,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       status,
       user,
+      loggedOutByUser,
       login: async (email, password) => accept(await api.auth.login({ email, password })),
       register: async (fullName, email, password) =>
         accept(await api.auth.register({ full_name: fullName, email, password })),
@@ -70,10 +75,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch {
           // Already invalid on the server: signing out locally is enough.
         }
+        setLoggedOutByUser(true);
         signOutLocally();
       },
     }),
-    [status, user, accept, signOutLocally],
+    [status, user, loggedOutByUser, accept, signOutLocally],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

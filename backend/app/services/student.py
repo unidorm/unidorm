@@ -1,4 +1,5 @@
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+UTC = timezone.utc
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -6,7 +7,8 @@ from sqlalchemy.orm import Session
 from app.models.survey import ResponseStatus
 from app.models.user import RoomType, User
 from app.schemas.auth import UserOut
-from app.schemas.student import DashboardOut, RoomPreferenceOut, SurveySummary
+from app.schemas.student import DashboardOut, MatchingSummary, RoomPreferenceOut, SurveySummary
+from app.services import room_groups
 from app.services import survey as survey_service
 
 
@@ -46,8 +48,10 @@ def dashboard(db: Session, user: User) -> DashboardOut:
         state = "in_progress"
     else:
         state = "not_started"
+    matching_state, approved_at = room_groups.matching_state(db, user)
     return DashboardOut(
         user=UserOut.model_validate(user),
+        matching=MatchingSummary(state=matching_state, approved_at=approved_at),
         room_preference=room_preference_out(db, user),
         survey=SurveySummary(
             state=state, answered=response.answered, total=response.total, submitted_at=response.submitted_at

@@ -1,6 +1,7 @@
 """Shared FastAPI dependencies: who is calling, and are they allowed."""
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+UTC = timezone.utc
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -40,4 +41,10 @@ def get_current_user(session: AuthSession = Depends(get_current_session)) -> Use
 def require_student(user: User = Depends(get_current_user)) -> User:
     if user.role != UserRole.STUDENT:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This page is for students.")
+    return user
+
+
+def require_manager(user: User = Depends(get_current_user)) -> User:
+    if user.role != UserRole.HOUSING_MANAGER:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This page is for the Housing Office.")
     return user

@@ -1,38 +1,154 @@
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 import { ManagerDesk } from "../../components/illustrations/Illustrations";
+import { Mascot } from "../../components/illustrations/Mascot";
 import PageHeader from "../../components/layout/PageHeader";
-import { Callout, Card, Icon, Input, Pill, StatCard } from "../../components/ui";
-import { roomGroups } from "../../data/manager";
-import type { ScoreBand } from "../../types/domain";
+import ScoreRing from "../../components/matching/ScoreRing";
+import { Button, ButtonLink, Card, ErrorState, FormMessage, Icon, LoadingState, Pill, StatCard } from "../../components/ui";
+import { ROUTES } from "../../config/routes";
+import { useApi } from "../../hooks/useApi";
+import { usePageTitle } from "../../hooks/usePageTitle";
+import { api } from "../../services/api";
+import { errorMessage } from "../../services/apiClient";
+import type { EligibleStudent, RoommateGroupSummary } from "../../types/api";
 import type { Tone } from "../../types/ui";
+import { cx } from "../../utils/cx";
+import { ROOM_TYPE_LABELS, formatDate } from "../../utils/studentProgress";
 
-const bandMeta: Record<ScoreBand, { label: string; tone: Tone }> = {
-  high: { label: "High", tone: "success" },
-  medium: { label: "Medium", tone: "warning" },
-  low: { label: "Low", tone: "danger" },
+const STATUS: Record<EligibleStudent["match_status"], { label: string; tone: Tone }> = {
+  waiting: { label: "No group yet", tone: "neutral" },
+  proposed: { label: "Proposed", tone: "warning" },
+  approved: { label: "Approved", tone: "success" },
 };
 
-const columns = ["Room", "Size", "Students", "Room score", "Weakest area", "Red flags"];
+export const groupPath = (id: number) => ROUTES.manager.roomGroup.replace(":groupId", String(id));
+
+function GroupCard({
+  group,
+  busy,
+  onDecide,
+}: {
+  group: RoommateGroupSummary;
+  busy: boolean;
+  onDecide?: (approve: boolean) => void;
+}) {
+  const result = group.result;
+  return (
+    <li className="flex flex-col rounded-card bg-surface p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="eyebrow">{ROOM_TYPE_LABELS[group.room_type]}</p>
+          <ul className="mt-1 flex flex-col gap-0.5">
+            {result.members.map((member) => (
+              <li key={member.id} className="break-words font-semibold leading-snug">
+                {member.full_name}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <ScoreRing score={result.room_score} level={result.compatibility_level} caption="room" size="md" className="shrink-0" />
+      </div>
+      {result.members.length > 2 && (
+        <p className="mt-3 text-sm text-muted">
+          Average pair <b className="text-text">{result.average_pairs}%</b> · weakest pair{" "}
+          <b className={result.worst_pair < 60 ? "text-danger" : "text-text"}>{result.worst_pair}%</b>
+        </p>
+      )}
+      {group.status === "approved" && (
+        <p className="mt-3 text-sm text-muted">
+          Approved {formatDate(group.decided_at)}
+          {group.decided_by ? ` by ${group.decided_by}` : ""}
+        </p>
+      )}
+      <div className="mt-4 flex flex-wrap gap-2 pt-1">
+        <ButtonLink to={groupPath(group.id)} variant="outline" size="sm">
+          Details
+        </ButtonLink>
+        {onDecide && (
+          <>
+            <Button size="sm" onClick={() => onDecide(true)} disabled={busy}>
+              <Icon name="check" size={16} />
+              Approve
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => onDecide(false)} disabled={busy}>
+              Reject
+            </Button>
+          </>
+        )}
+      </div>
+    </li>
+  );
+}
 
 export default function RoomsPage() {
-  const [query, setQuery] = useState("");
-  const term = query.trim().toLowerCase();
+  usePageTitle("Room groups");
+  const navigate = useNavigate();
+  const { data, error, loading, reload, setData } = useApi(api.matching.overview);
+  const [running, setRunning] = useState(false);
+  const [busyGroup, setBusyGroup] = useState<number | null>(null);
+  const [message, setMessage] = useState<{ tone: "success" | "danger"; text: string } | null>(null);
+  const [selected, setSelected] = useState<number[]>([]);
 
-  const count = (band: ScoreBand) => roomGroups.filter((room) => room.band === band).length;
-  const waiting = roomGroups.filter((room) => room.score === null).length;
+  if (loading && !data) return <LoadingState label="Loading room groups…" />;
+  if (error || !data) return <ErrorState error={error} onRetry={reload} title="Could not load room groups" />;
 
-  const visibleRooms = roomGroups.filter(
-    (room) => !term || `${room.roomNumber} ${room.students.join(" ")} ${room.studentsNote ?? ""}`.toLowerCase().includes(term),
-  );
+  const waiting = data.students.filter((student) => student.match_status === "waiting").length;
+
+  const runMatching = async () => {
+    setMessage(null);
+    setRunning(true);
+    try {
+      const next = await api.matching.run();
+      setData(next);
+      const count = next.last_run?.proposed_count ?? 0;
+      setMessage({
+        tone: "success",
+        text:
+          count > 0
+            ? `Matching finished: ${count} room ${count === 1 ? "group" : "groups"} proposed from ${next.last_run?.eligible_count} students. Review them below.`
+            : "Matching finished, but there are not enough students with the same room type to form a group yet.",
+      });
+    } catch (reason) {
+      setMessage({ tone: "danger", text: errorMessage(reason) });
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const decide = async (group: RoommateGroupSummary, approve: boolean) => {
+    setMessage(null);
+    setBusyGroup(group.id);
+    try {
+      await (approve ? api.matching.approve(group.id) : api.matching.reject(group.id));
+      const names = group.result.members.map((member) => member.full_name).join(", ");
+      setMessage({
+        tone: "success",
+        text: approve ? `Approved: ${names}. They can now see their room.` : `Rejected: ${names}. They will be matched again in the next run.`,
+      });
+      setSelected([]);
+      reload();
+    } catch (reason) {
+      setMessage({ tone: "danger", text: errorMessage(reason) });
+    } finally {
+      setBusyGroup(null);
+    }
+  };
+
+  const toggle = (id: number) =>
+    setSelected((current) => (current.includes(id) ? current.filter((item) => item !== id) : current.length < 4 ? [...current, id] : current));
 
   return (
     <>
       <PageHeader
         eyebrow="Housing Office · Jastar City"
-        title="Room groups to review"
-        description="Room groups, who is assigned to them and how compatible the students are."
-        sampleData
+        title="Room groups"
+        description="UniDorm scores how well students fit together and proposes room groups. Nothing is final until you approve it."
+        actions={
+          <Button size="lg" onClick={runMatching} loading={running} disabled={data.students.length < 2}>
+            Run matching
+          </Button>
+        }
       />
 
       <Card variant="raised" className="mb-6">
@@ -40,91 +156,142 @@ export default function RoomsPage() {
           <ManagerDesk className="w-40 shrink-0" />
           <div className="min-w-0 flex-1 basis-64">
             <p className="font-display text-lg font-semibold">
-              {roomGroups.length} room groups · {roomGroups.filter((room) => room.proposed).length} waiting for your
-              review
+              {data.last_run
+                ? `Last run ${formatDate(data.last_run.created_at)}${data.last_run.started_by ? ` by ${data.last_run.started_by}` : ""}`
+                : "Matching has not been run yet"}
             </p>
             <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted">
-              UniDorm scores how well the students in each group fit together and lists red flags. It only
-              recommends: you approve or change every room.
+              Students are grouped by the room type they asked for. Running again replaces the open proposals; approved
+              rooms stay as they are, and students from rejected groups are matched again.
             </p>
           </div>
         </div>
       </Card>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="High" value={count("high")} tone="success" size="lg" />
-        <StatCard label="Medium" value={count("medium")} tone="warning" size="lg" />
-        <StatCard label="Low" value={count("low")} tone="danger" size="lg" />
-        <StatCard label="Waiting for surveys" value={waiting} size="lg" />
-      </div>
-
-      <Input
-        className="mb-4 mt-8 max-w-md"
-        label="Search rooms or students"
-        placeholder="Room number or student name"
-        type="search"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        startAdornment={<Icon name="search" size={18} />}
-      />
-
-      <Card padding="none" className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[46rem] text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-sm text-muted">
-                {columns.map((column) => (
-                  <th key={column} scope="col" className="px-5 py-4 font-semibold">
-                    {column}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {visibleRooms.map((room) => (
-                <tr key={room.id}>
-                  <th scope="row" className="px-5 py-4 font-medium">
-                    <span className="flex items-center gap-2">
-                      <span className="font-display text-base font-semibold">{room.roomNumber}</span>
-                      {room.proposed && <Pill tone="warning">Proposed</Pill>}
-                    </span>
-                  </th>
-                  <td className="px-5 py-4 tabular-nums">{room.capacity}</td>
-                  <td className="px-5 py-4">
-                    {room.students.length > 0 ? room.students.join(", ") : room.studentsNote}
-                  </td>
-                  <td className="px-5 py-4">
-                    {room.score !== null && room.band ? (
-                      <span className="flex items-center gap-2">
-                        <span className="font-display font-semibold tabular-nums">{room.score}</span>
-                        <Pill tone={bandMeta[room.band].tone}>{bandMeta[room.band].label}</Pill>
-                      </span>
-                    ) : (
-                      <Pill tone="neutral">Not scored</Pill>
-                    )}
-                  </td>
-                  <td className="px-5 py-4">{room.weakestArea ?? "–"}</td>
-                  <td className="px-5 py-4">
-                    {room.redFlags > 0 ? <Pill tone="danger">{room.redFlags}</Pill> : <span className="text-muted">None</span>}
-                  </td>
-                </tr>
-              ))}
-              {visibleRooms.length === 0 && (
-                <tr>
-                  <td colSpan={columns.length} className="px-5 py-8 text-center text-muted">
-                    No rooms match “{query.trim()}”.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      {message && (
+        <div className="mb-6">
+          <FormMessage tone={message.tone}>{message.text}</FormMessage>
         </div>
-      </Card>
+      )}
 
-      <Callout className="mt-5">
-        Scores and red flags are sample values. Scoring, room review and approving or changing a group arrive in later
-        stages.
-      </Callout>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard label="Ready to match" value={data.students.length} size="lg" />
+        <StatCard label="Without a group" value={waiting} size="lg" />
+        <StatCard label="Proposed groups" value={data.proposed.length} tone="warning" size="lg" />
+        <StatCard label="Approved rooms" value={data.approved.length} tone="success" size="lg" />
+      </div>
+      {data.waiting_for_questionnaire > 0 && (
+        <p className="mt-3 text-sm text-muted">
+          {data.waiting_for_questionnaire} more {data.waiting_for_questionnaire === 1 ? "student has" : "students have"} chosen a shared
+          room but not submitted the questionnaire yet. They join the matching once they submit.
+        </p>
+      )}
+
+      <section className="mt-8" aria-labelledby="proposed-title">
+        <h2 id="proposed-title" className="mb-4 font-display text-xl font-semibold">
+          Waiting for your review
+        </h2>
+        {data.proposed.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 rounded-card bg-surface px-6 py-10 text-center">
+            <Mascot mood="sleepy" className="size-24" />
+            <p className="font-display font-semibold">No proposals to review</p>
+            <p className="max-w-md text-sm text-muted">
+              {data.students.length < 2
+                ? "At least two students with a submitted questionnaire are needed."
+                : "Press Run matching to calculate compatibility and propose room groups."}
+            </p>
+          </div>
+        ) : (
+          <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {data.proposed.map((group) => (
+              <GroupCard key={group.id} group={group} busy={busyGroup === group.id} onDecide={(approve) => decide(group, approve)} />
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {data.approved.length > 0 && (
+        <section className="mt-8" aria-labelledby="approved-title">
+          <h2 id="approved-title" className="mb-4 font-display text-xl font-semibold">
+            Approved rooms
+          </h2>
+          <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {data.approved.map((group) => (
+              <GroupCard key={group.id} group={group} busy={false} />
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <Card
+        className="mt-8"
+        title="Students ready to match"
+        description="Shared-room students with a submitted questionnaire. Tick 2–4 students to compare them yourself."
+        actions={
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={selected.length < 2}
+            onClick={() => navigate(`${ROUTES.manager.compare}?ids=${selected.join(",")}`)}
+          >
+            Compare selected ({selected.length})
+          </Button>
+        }
+      >
+        {data.students.length === 0 ? (
+          <p className="text-sm text-muted">No student has submitted the questionnaire yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[36rem] text-left text-sm">
+              <thead>
+                <tr className="border-b border-border text-xs text-muted">
+                  <th className="w-10 py-2 font-semibold">
+                    <span className="sr-only">Compare</span>
+                  </th>
+                  <th className="py-2 font-semibold">Student</th>
+                  <th className="py-2 font-semibold">Room type</th>
+                  <th className="py-2 font-semibold">Submitted</th>
+                  <th className="py-2 font-semibold">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {data.students.map((student) => {
+                  const checked = selected.includes(student.id);
+                  return (
+                    <tr key={student.id} className={cx(checked && "bg-highlight-soft")}>
+                      <td className="py-2.5">
+                        <input
+                          type="checkbox"
+                          className="size-4 accent-[var(--color-accent)]"
+                          checked={checked}
+                          disabled={!checked && selected.length >= 4}
+                          onChange={() => toggle(student.id)}
+                          aria-label={`Compare ${student.full_name}`}
+                        />
+                      </td>
+                      <td className="py-2.5">
+                        <span className="font-semibold">{student.full_name}</span>
+                        <span className="block text-xs text-muted">{student.email}</span>
+                      </td>
+                      <td className="py-2.5">{ROOM_TYPE_LABELS[student.room_type]}</td>
+                      <td className="py-2.5 text-muted">{formatDate(student.submitted_at)}</td>
+                      <td className="py-2.5">
+                        {student.group_id ? (
+                          <Link to={groupPath(student.group_id)} className="hover:opacity-80">
+                            <Pill tone={STATUS[student.match_status].tone}>{STATUS[student.match_status].label}</Pill>
+                          </Link>
+                        ) : (
+                          <Pill tone={STATUS[student.match_status].tone}>{STATUS[student.match_status].label}</Pill>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
     </>
   );
 }

@@ -25,7 +25,16 @@ export default function RoommateMatchingPage() {
   } else if (state === "not_needed") {
     action = <p className="text-sm text-muted">You chose a single room, so you do not need the questionnaire.</p>;
   } else if (state === "submitted") {
-    action = <ButtonLink to={ROUTES.student.surveyReview} size="lg" variant="secondary">See my answers</ButtonLink>;
+    action = (
+      <>
+        <ButtonLink to={ROUTES.student.matchingResults} size="lg">
+          {dashboard.matching.state === "matched" ? "See matching results" : "Matching status"}
+        </ButtonLink>
+        <ButtonLink to={ROUTES.student.surveyReview} size="lg" variant="secondary">
+          See my answers
+        </ButtonLink>
+      </>
+    );
   } else {
     action = (
       <ButtonLink to={ROUTES.student.survey} size="lg">

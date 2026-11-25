@@ -2,13 +2,11 @@ import { useNavigate } from "react-router-dom";
 
 import { ROUTES } from "../../config/routes";
 import { initialsOf, useAuth } from "../../context/AuthContext";
-import { sampleUsers } from "../../data/users";
 import type { Portal } from "../../types/navigation";
 import { Icon } from "../ui";
 import LanguageSwitch from "./LanguageSwitch";
 import NotificationsMenu from "./NotificationsMenu";
 import ProfileMenu from "./ProfileMenu";
-import RoleSwitch from "./RoleSwitch";
 
 interface HeaderProps {
   portal: Portal;
@@ -22,17 +20,19 @@ export default function Header({ portal, onMenuClick, menuOpen, menuId }: Header
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  // The student portal shows the signed-in account; the manager portal keeps its sample profile until Phase 3.
-  const signedIn = portal === "student" && user;
-  const profile = signedIn
-    ? { fullName: user.full_name, initials: initialsOf(user.full_name), role: "Student", position: "KBTU student", email: user.email }
-    : sampleUsers[portal];
-  const onLogout = signedIn
-    ? async () => {
-        await logout();
-        navigate(ROUTES.auth.login, { replace: true });
-      }
-    : undefined;
+  // Both portals sit behind RequireRole, so a signed-in user is always present here.
+  const isManager = user?.role === "housing_manager";
+  const profile = {
+    fullName: user?.full_name ?? "",
+    initials: initialsOf(user?.full_name ?? ""),
+    role: isManager ? "Housing manager" : "Student",
+    position: isManager ? "KBTU Housing Office" : "KBTU student",
+    email: user?.email ?? "",
+  };
+  const onLogout = async () => {
+    await logout();
+    navigate(ROUTES.auth.login, { replace: true });
+  };
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-3 border-b border-border bg-surface/95 px-4 backdrop-blur sm:px-6 lg:px-10">
@@ -59,7 +59,6 @@ export default function Header({ portal, onMenuClick, menuOpen, menuId }: Header
       <div className="flex items-center gap-1.5 sm:gap-3">
         <LanguageSwitch />
         <NotificationsMenu portal={portal} />
-        <RoleSwitch current={portal} />
         <ProfileMenu user={profile} onLogout={onLogout} />
       </div>
     </header>

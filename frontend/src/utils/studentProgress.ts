@@ -22,6 +22,7 @@ export const SURVEY_STATE: Record<SurveyState, { label: string; tone: Tone }> = 
  */
 export function currentStage(dashboard: Dashboard): number {
   if (!dashboard.room_preference.room_type) return 0;
+  if (dashboard.matching.state === "matched") return 3;
   if (dashboard.survey.state === "not_needed" || dashboard.survey.state === "submitted") return 2;
   return 1;
 }
@@ -39,6 +40,6 @@ const DOODLES = ["sleep", "noise", "cleanliness", "visitors", "study"] as const;
 export type DoodleCategory = (typeof DOODLES)[number];
 
 /** The illustrated categories have a doodle; a category added later simply shows none. */
-export function doodleFor(category: SurveyCategory): DoodleCategory | null {
+export function doodleFor(category: Pick<SurveyCategory, "id">): DoodleCategory | null {
   return (DOODLES as readonly string[]).includes(category.id) ? (category.id as DoodleCategory) : null;
 }

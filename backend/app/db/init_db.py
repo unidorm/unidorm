@@ -2,7 +2,8 @@
 
 Run from the backend/ folder:  python -m app.db.init_db
 
-Safe to run again: missing tables are created, the Phase 2 columns are added to an existing
+Safe to run again: missing tables are created (Phase 3 adds matching_runs, roommate_groups and
+roommate_group_members), the Phase 2 columns are added to an existing
 `users` table (Stage 1 databases), and the questionnaire is inserted or updated.
 Migrations with Alembic replace this script when the schema starts changing often.
 """

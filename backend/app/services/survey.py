@@ -1,6 +1,7 @@
 """Questionnaire logic: structure, a student's answers, saving and submitting."""
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+UTC = timezone.utc
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, select

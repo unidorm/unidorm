@@ -19,7 +19,7 @@ function Avatar({ initials, size = "md" }: { initials: string; size?: "md" | "lg
 }
 
 /** Avatar, name and role in the header, with a small panel of profile details. */
-export default function ProfileMenu({ user, onLogout }: { user: SampleUser; onLogout?: () => Promise<void> }) {
+export default function ProfileMenu({ user, onLogout }: { user: SampleUser; onLogout: () => Promise<void> }) {
   const [open, setOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -81,8 +81,7 @@ export default function ProfileMenu({ user, onLogout }: { user: SampleUser; onLo
               <dd className="font-medium">{user.position}</dd>
             </div>
           </dl>
-          {onLogout ? (
-            <button
+                      <button
               type="button"
               disabled={leaving}
               onClick={async () => {
@@ -94,11 +93,6 @@ export default function ProfileMenu({ user, onLogout }: { user: SampleUser; onLo
               <Icon name="logout" size={18} />
               {leaving ? "Signing out…" : "Log out"}
             </button>
-          ) : (
-            <p className="mt-2 text-xs leading-relaxed text-muted">
-              Sample profile. Manager sign-in comes in Phase 3.
-            </p>
-          )}
         </div>
       )}
     </div>

@@ -25,7 +25,10 @@ The team now delivers this plan in three course phases:
 - **Phase 2 – Student Portal (done):** student registration and sign-in with server-side sessions, dashboard,
   room type selection, the 15-question survey loaded from the database with autosave, review and submit
   (rows 1, 2 and 4, student side). Tables are created by `python -m app.db.init_db`; Alembic is not used yet.
-- **Phase 3 (next):** housing manager sign-in and portal, scoring engine (rows 5–6).
+- **Phase 3 – Matching System (done):** matching algorithm (`backend/app/services/matching_service.py`,
+  see MATCHING_ALGORITHM.md), room groups of 2–4 with RoomScore, manager sign-in, run / review / approve /
+  reject, compare tool, student results page (rows 5–6).
+- **Next:** room numbers for approved groups and the roommate agreement, feedback surveys, relocations.
 
 ## Main modules
 

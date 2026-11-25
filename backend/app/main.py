@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routers import auth, health, portal, student, survey
+from app.api.routers import auth, health, matching, portal, student, survey
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 
@@ -29,3 +29,5 @@ app.include_router(portal.router)
 app.include_router(auth.router)
 app.include_router(student.router)
 app.include_router(survey.router)
+app.include_router(matching.router)
+app.include_router(matching.student_router)
